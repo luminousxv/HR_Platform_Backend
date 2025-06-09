@@ -12,12 +12,25 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
   ) {}
 
+  async findAll(): Promise<Omit<User, 'password'>[]> {
+    const users = await this.userRepository.find();
+    return users.map((user) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...result } = user;
+      return result;
+    });
+  }
+
   async findOneByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
   }
 
+  async findOneById(id: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
   async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
-    const { email, password } = createUserDto;
+    const { email, password, role } = createUserDto;
 
     // 이메일 중복 확인
     const existingUser = await this.findOneByEmail(email);
@@ -30,9 +43,9 @@ export class UsersService {
 
     // 사용자 생성
     const newUser = this.userRepository.create({
-      ...createUserDto,
       email,
       password: hashedPassword,
+      role,
     });
 
     const savedUser = await this.userRepository.save(newUser);
