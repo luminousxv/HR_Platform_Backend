@@ -1,17 +1,14 @@
 import {
-  Column,
-  CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
+import { UserRole } from '../enums/user-role.enum';
 
-export enum UserRole {
-  ADMIN = 'ADMIN', // 관리자
-  STAFF = 'STAFF', // 일반 직원
-}
-
-@Entity({ name: 'users' })
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,7 +17,7 @@ export class User {
   email: string;
 
   @Column()
-  password: string;
+  password?: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.STAFF })
   role: UserRole;
@@ -30,4 +27,7 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }
