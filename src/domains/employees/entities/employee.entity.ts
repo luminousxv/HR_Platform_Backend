@@ -15,6 +15,8 @@ import { EmploymentType } from '../enums/employment-type.enum';
 import { EmploymentStatus } from '../enums/employment-status.enum';
 import { LeaveBalance } from '../../leaves/entities/leave-balance.entity';
 import { LeaveRequest } from '../../leaves/entities/leave-request.entity';
+import { Salary } from '../../payrolls/entities/salary.entity';
+import { Payroll } from '../../payrolls/entities/payroll.entity';
 
 @Entity('employees')
 export class Employee {
@@ -72,6 +74,14 @@ export class Employee {
   // 직원 1:N 휴가 요청
   @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee)
   leaveRequests: LeaveRequest[];
+
+  // 직원 1:1 급여 정보
+  @OneToOne(() => Salary, (salary) => salary.employee)
+  salary: Salary;
+
+  // 직원 1:N 급여 명세서
+  @OneToMany(() => Payroll, (payroll) => payroll.employee)
+  payrolls: Payroll[];
 
   @CreateDateColumn()
   createdAt: Date;

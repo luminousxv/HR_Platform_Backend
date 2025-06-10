@@ -122,6 +122,16 @@ export class LeavesService {
       throw new BadRequestException('이미 처리된 휴가 신청입니다.');
     }
 
+    const processorEmployee = await this.employeesService.findOneByUserId(
+      adminUser.id,
+    );
+    if (!processorEmployee) {
+      // 관리자 계정이지만 직원 정보가 없는 경우. 이 경우는 시스템 오류에 가깝다.
+      throw new NotFoundException(
+        '휴가 처리자의 직원 정보를 찾을 수 없습니다.',
+      );
+    }
+
     const { status, rejectionReason } = updateDto;
 
     // 연차 승인/반려 시 잔여 연차 업데이트
@@ -144,7 +154,7 @@ export class LeavesService {
     }
 
     leaveRequest.status = status;
-    leaveRequest.processedById = adminUser.id;
+    leaveRequest.processedById = processorEmployee.id;
     leaveRequest.rejectionReason =
       status === LeaveRequestStatus.REJECTED ? rejectionReason || null : null;
 

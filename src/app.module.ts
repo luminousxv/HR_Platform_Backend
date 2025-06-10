@@ -7,6 +7,7 @@ import { EmployeesModule } from './domains/employees/employees.module';
 import { SharedModule } from './shared/shared.module';
 import { AttendancesModule } from './domains/attendances/attendances.module';
 import { LeavesModule } from './domains/leaves/leaves.module';
+import { PayrollsModule } from './domains/payrolls/payrolls.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LeavesModule } from './domains/leaves/leaves.module';
     SharedModule,
     AttendancesModule,
     LeavesModule,
+    PayrollsModule,
   ],
   controllers: [],
   providers: [],
