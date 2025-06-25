@@ -36,7 +36,9 @@ export class PayrollsService {
       );
     }
 
-    let salary = await this.salaryRepository.findOne({ where: { employeeId } });
+    let salary = await this.salaryRepository.findOne({
+      where: { employeeId },
+    });
 
     if (salary) {
       // 급여 정보 업데이트
@@ -45,7 +47,7 @@ export class PayrollsService {
       // 급여 정보 생성
       salary = this.salaryRepository.create({
         ...upsertSalaryDto,
-        employeeId,
+        employee,
       });
     }
 
