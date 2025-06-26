@@ -12,6 +12,9 @@ import { AttendancesService } from './attendances.service';
 import { JwtAuthGuard } from '../../core/auth/guards/jwt-auth.guard';
 import { ClockInDto } from './dto/clock-in.dto';
 import { ClockOutDto } from './dto/clock-out.dto';
+import { RolesGuard } from 'src/core/auth/guards/roles.guard';
+import { Roles } from 'src/core/auth/decorators/roles.decorator';
+import { UserRole } from 'src/domains/users/enums/user-role.enum';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -50,5 +53,15 @@ export class AttendancesController {
     @Query('month', ParseIntPipe) month: number,
   ) {
     return this.attendancesService.findMyAttendances(req.user.id, year, month);
+  }
+
+  @Get()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findAllAttendances(
+    @Query('year', ParseIntPipe) year: number,
+    @Query('month', ParseIntPipe) month: number,
+  ) {
+    return this.attendancesService.findAllAttendances(year, month);
   }
 }
