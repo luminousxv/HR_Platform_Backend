@@ -11,12 +11,16 @@ import { Employee } from '../employees/entities/employee.entity';
 import { UpsertSalaryDto } from './dto/upsert-salary.dto';
 import { GeneratePayrollDto } from './dto/generate-payroll.dto';
 import { User } from '../users/entities/user.entity';
+import { PayrollDeduction } from './entities/payroll-deduction.entity';
+import { DeductionType } from './enums/deduction-type.enum';
 
 @Injectable()
 export class PayrollsService {
   constructor(
     @InjectRepository(Payroll)
     private payrollRepository: Repository<Payroll>,
+    @InjectRepository(PayrollDeduction)
+    private payrollDeductionRepository: Repository<PayrollDeduction>,
     @InjectRepository(Salary)
     private salaryRepository: Repository<Salary>,
     @InjectRepository(Employee)
@@ -60,7 +64,6 @@ export class PayrollsService {
     const { year, month } = generatePayrollDto;
     const paymentMonth = `${year}-${String(month).padStart(2, '0')}-01`;
 
-    // 해당 월에 이미 생성된 명세서가 있는지 확인
     const existingPayroll = await this.payrollRepository.findOne({
       where: { paymentMonth },
     });
@@ -70,7 +73,6 @@ export class PayrollsService {
       );
     }
 
-    // 모든 재직중인 직원 조회
     const activeEmployees = await this.employeeRepository.find({
       relations: ['salary'],
     });
@@ -79,7 +81,6 @@ export class PayrollsService {
 
     for (const employee of activeEmployees) {
       if (!employee.salary || !employee.salary.baseSalary) {
-        // 급여 정보가 없는 직원은 건너뜀 (또는 에러 처리)
         console.warn(
           `직원 ${employee.name}(${employee.id})의 급여 정보가 없어 급여 생성을 건너뜁니다.`,
         );
@@ -87,28 +88,56 @@ export class PayrollsService {
       }
 
       const baseSalary = employee.salary.baseSalary;
+      const deductions: PayrollDeduction[] = [];
 
       // (MVP) 단순화된 공제 계산 로직
-      const nationalPension = baseSalary * 0.045; // 국민연금 (4.5%)
-      const healthInsurance = baseSalary * 0.03545; // 건강보험 (3.545%)
-      const employmentInsurance = baseSalary * 0.009; // 고용보험 (0.9%)
-      const incomeTax =
-        (baseSalary - nationalPension - healthInsurance - employmentInsurance) *
-        0.1; // 소득세 (간단히 10%)
+      const nationalPension = baseSalary * 0.045;
+      deductions.push(
+        this.payrollDeductionRepository.create({
+          type: DeductionType.NATIONAL_PENSION,
+          amount: nationalPension,
+        }),
+      );
 
-      const totalDeductions =
-        nationalPension + healthInsurance + employmentInsurance + incomeTax;
+      const healthInsurance = baseSalary * 0.03545;
+      deductions.push(
+        this.payrollDeductionRepository.create({
+          type: DeductionType.HEALTH_INSURANCE,
+          amount: healthInsurance,
+        }),
+      );
+
+      const employmentInsurance = baseSalary * 0.009;
+      deductions.push(
+        this.payrollDeductionRepository.create({
+          type: DeductionType.EMPLOYMENT_INSURANCE,
+          amount: employmentInsurance,
+        }),
+      );
+
+      // 소득세 계산을 위한 과세 표준액
+      const taxableIncome =
+        baseSalary - nationalPension - healthInsurance - employmentInsurance;
+      const incomeTax = taxableIncome > 0 ? taxableIncome * 0.1 : 0; // 소득세 (간단히 10%, 음수일 경우 0)
+      deductions.push(
+        this.payrollDeductionRepository.create({
+          type: DeductionType.INCOME_TAX,
+          amount: incomeTax,
+        }),
+      );
+
+      const totalDeductions = deductions.reduce(
+        (sum, d) => sum + Number(d.amount),
+        0,
+      );
       const netPay = baseSalary - totalDeductions;
 
       const payroll = this.payrollRepository.create({
         employeeId: employee.id,
         paymentMonth,
         baseSalary,
-        bonus: 0, // MVP에서는 보너스 0으로 가정
-        nationalPension,
-        healthInsurance,
-        employmentInsurance,
-        incomeTax,
+        bonus: 0,
+        deductions,
         totalDeductions,
         netPay,
       });
@@ -121,6 +150,33 @@ export class PayrollsService {
     return { count: payrollsToCreate.length };
   }
 
+  async findAllPayrolls(year: number, month: number) {
+    const paymentMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+
+    return this.payrollRepository.find({
+      where: {
+        paymentMonth: paymentMonth,
+      },
+      relations: ['employee', 'employee.user', 'deductions'],
+      order: {
+        employee: {
+          name: 'ASC',
+        },
+      },
+    });
+  }
+
+  async findOne(id: string): Promise<Payroll> {
+    const payroll = await this.payrollRepository.findOne({
+      where: { id },
+      relations: ['employee', 'employee.user', 'deductions'],
+    });
+    if (!payroll) {
+      throw new NotFoundException(`ID가 ${id}인 급여 정보를 찾을 수 없습니다.`);
+    }
+    return payroll;
+  }
+
   async findMyPayrolls(user: User): Promise<Payroll[]> {
     const employee = await this.employeeRepository.findOne({
       where: { userId: user.id },
@@ -131,7 +187,25 @@ export class PayrollsService {
 
     return this.payrollRepository.find({
       where: { employeeId: employee.id },
+      relations: ['deductions'],
       order: { paymentMonth: 'DESC' },
     });
+  }
+
+  async deleteByMonth(
+    year: number,
+    month: number,
+  ): Promise<{ deletedCount: number }> {
+    const paymentMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+
+    const deleteResult = await this.payrollRepository.delete({ paymentMonth });
+
+    if (deleteResult.affected === 0) {
+      throw new NotFoundException(
+        `${year}년 ${month}월에 해당하는 급여 명세서가 없습니다.`,
+      );
+    }
+
+    return { deletedCount: deleteResult.affected || 0 };
   }
 }

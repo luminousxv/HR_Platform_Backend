@@ -6,8 +6,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
+  OneToMany,
 } from 'typeorm';
 import { Employee } from '../../employees/entities/employee.entity';
+import { PayrollDeduction } from './payroll-deduction.entity';
 
 @Entity('payrolls')
 @Unique(['employeeId', 'paymentMonth'])
@@ -30,17 +32,10 @@ export class Payroll {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   bonus: number; // 상여금
 
-  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-  incomeTax: number; // 소득세
-
-  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-  nationalPension: number; // 국민연금
-
-  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-  healthInsurance: number; // 건강보험
-
-  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-  employmentInsurance: number; // 고용보험
+  @OneToMany(() => PayrollDeduction, (deduction) => deduction.payroll, {
+    cascade: true,
+  })
+  deductions: PayrollDeduction[];
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
   totalDeductions: number; // 공제 합계

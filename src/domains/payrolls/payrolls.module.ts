@@ -6,10 +6,11 @@ import { Payroll } from './entities/payroll.entity';
 import { Salary } from './entities/salary.entity';
 import { EmployeesModule } from '../employees/employees.module';
 import { Employee } from '../employees/entities/employee.entity';
+import { PayrollDeduction } from './entities/payroll-deduction.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payroll, Salary, Employee]),
+    TypeOrmModule.forFeature([Payroll, PayrollDeduction, Salary, Employee]),
     EmployeesModule,
   ],
   controllers: [PayrollsController],
