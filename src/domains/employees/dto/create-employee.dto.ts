@@ -5,8 +5,11 @@ import {
   IsDateString,
   IsUUID,
   IsOptional,
+  IsNumber,
+  Min,
 } from 'class-validator';
 import { EmploymentType } from '../enums/employment-type.enum';
+import { EmploymentStatus } from '../enums/employment-status.enum';
 
 export class CreateEmployeeDto {
   @IsString()
@@ -41,6 +44,14 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   employmentType: EmploymentType;
 
+  @IsEnum(EmploymentStatus)
+  @IsNotEmpty()
+  status: EmploymentStatus;
+
+  @IsDateString()
+  @IsOptional()
+  resignationDate?: string | null;
+
   @IsString()
   @IsNotEmpty()
   bankName: string;
@@ -52,4 +63,13 @@ export class CreateEmployeeDto {
   @IsUUID()
   @IsNotEmpty()
   userId: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  baseSalary?: number;
+
+  @IsDateString()
+  @IsOptional()
+  effectiveDate?: string;
 }

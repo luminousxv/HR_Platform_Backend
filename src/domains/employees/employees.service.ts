@@ -10,12 +10,15 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { CryptoService } from '../../shared/services/crypto.service';
 import { UsersService } from '../users/users.service';
+import { Salary } from '../payrolls/entities/salary.entity';
 
 @Injectable()
 export class EmployeesService {
   constructor(
     @InjectRepository(Employee)
     private employeesRepository: Repository<Employee>,
+    @InjectRepository(Salary)
+    private salaryRepository: Repository<Salary>,
     private readonly cryptoService: CryptoService,
     private readonly usersService: UsersService,
   ) {}
@@ -35,8 +38,14 @@ export class EmployeesService {
   }
 
   async create(createEmployeeDto: CreateEmployeeDto): Promise<Employee> {
-    const { userId, residentRegistrationNumber, bankAccountNumber, ...rest } =
-      createEmployeeDto;
+    const {
+      userId,
+      residentRegistrationNumber,
+      bankAccountNumber,
+      baseSalary,
+      effectiveDate,
+      ...rest
+    } = createEmployeeDto;
 
     const user = await this.usersService.findOneById(userId);
     if (!user) {
@@ -64,11 +73,23 @@ export class EmployeesService {
     });
 
     const savedEmployee = await this.employeesRepository.save(employee);
+
+    if (baseSalary && effectiveDate) {
+      const salary = this.salaryRepository.create({
+        employeeId: savedEmployee.id,
+        baseSalary,
+        effectiveDate,
+      });
+      await this.salaryRepository.save(salary);
+    }
+
     return this.decryptEmployee(savedEmployee);
   }
 
   async findAll(): Promise<Employee[]> {
-    const employees = await this.employeesRepository.find();
+    const employees = await this.employeesRepository.find({
+      relations: ['user'],
+    });
     return employees.map((emp) => this.decryptEmployee(emp));
   }
 
