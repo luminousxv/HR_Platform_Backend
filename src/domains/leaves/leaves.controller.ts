@@ -50,6 +50,14 @@ export class LeavesController {
     return this.leavesService.getMyLeaveBalance(req.user);
   }
 
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: '(관리자) 모든 휴가 신청 목록 조회' })
+  findAllLeaveRequests() {
+    return this.leavesService.findAllLeaveRequests();
+  }
+
   @Patch('admin/:id/process')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

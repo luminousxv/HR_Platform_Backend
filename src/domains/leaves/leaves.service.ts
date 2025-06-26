@@ -97,6 +97,15 @@ export class LeavesService {
     });
   }
 
+  async findAllLeaveRequests(): Promise<LeaveRequest[]> {
+    return this.leaveRequestRepository.find({
+      relations: ['employee', 'employee.user'],
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
   async getMyLeaveBalance(user: User): Promise<LeaveBalance> {
     const employee = await this.employeesService.findOneByUserId(user.id);
     if (!employee) {
